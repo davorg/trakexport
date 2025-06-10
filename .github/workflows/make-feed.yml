@@ -47,18 +47,28 @@ jobs:
           fg.link(href='https://yourdomain.example/feed.xml', rel='self')
           fg.description('Latest 10 TV episodes watched via Trakt')
 
-          history = [e for e in data.get('history', []) if e.get('type') == 'episode' and 'episode' in e and 'show' in e]
-          sorted_history = list(reversed(sorted(history, key=lambda x: x['watched_at'], reverse=True)[:10]))
+          history = data.get('history', [])
+          sorted_history = sorted(history, key=lambda x: x.get('watched_at', ''), reverse=True)[:10]
 
           for entry in sorted_history:
               try:
-                  ep = entry['episode']
-                  show = entry['show']
-                  watched = datetime.strptime(entry['watched_at'], '%Y-%m-%dT%H:%M:%S.000Z')
                   fe = fg.add_entry()
-                  fe.title(f"{show['title']} - S{ep['season']:02}E{ep['number']:02} - {ep['title']}")
-                  fe.link(href=f"https://trakt.tv/shows/{show['ids']['slug']}/seasons/{ep['season']}/episodes/{ep['number']}")
+                  watched = datetime.strptime(entry['watched_at'], '%Y-%m-%dT%H:%M:%S.000Z')
                   fe.pubDate(watched.strftime('%a, %d %b %Y %H:%M:%S +0000'))
+
+                  if entry['type'] == 'episode' and 'episode' in entry and 'show' in entry:
+                      ep = entry['episode']
+                      show = entry['show']
+                      fe.title(f"{show['title']} - S{ep['season']:02}E{ep['number']:02} - {ep['title']}")
+                      fe.link(href=f"https://trakt.tv/shows/{show['ids']['slug']}/seasons/{ep['season']}/episodes/{ep['number']}")
+                      if 'overview' in show:
+                          fe.description(show['overview'])
+                  elif entry['type'] == 'movie' and 'movie' in entry:
+                      movie = entry['movie']
+                      fe.title(movie['title'])
+                      fe.link(href=f"https://trakt.tv/movies/{movie['ids']['slug']}")
+                      if 'overview' in movie:
+                          fe.description(movie['overview'])
               except Exception as ex:
                   print("Skipping entry due to error:", ex)
 
