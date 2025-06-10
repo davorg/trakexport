@@ -48,7 +48,7 @@ jobs:
           fg.description('Latest 10 TV episodes watched via Trakt')
 
           history = [e for e in data.get('history', []) if e.get('type') == 'episode' and 'episode' in e and 'show' in e]
-          sorted_history = sorted(history, key=lambda x: x['watched_at'], reverse=True)[:10]
+          sorted_history = list(reversed(sorted(history, key=lambda x: x['watched_at'], reverse=True)[:10]))
 
           for entry in sorted_history:
               try:
