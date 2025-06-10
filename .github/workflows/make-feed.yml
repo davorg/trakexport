@@ -1,0 +1,66 @@
+name: Build Trakt Feed
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'  # Every two hours
+  workflow_dispatch:
+
+jobs:
+  export-and-generate-feed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install traktexport feedgen
+
+      - name: Restore Traktexport credentials
+        run: |
+          mkdir -p ~/.config/traktexport
+          echo '${{ secrets.TRAKTEXPORT_AUTH }}' > ~/.config/traktexport/your_username.json
+
+      - name: Export Trakt history
+        run: traktexport partial_export your_username --pages 1 > history.json
+
+      - name: Generate RSS feed
+        run: |
+          python3 <<EOF
+          import json
+          from datetime import datetime
+          from feedgen.feed import FeedGenerator
+
+          with open('history.json') as f:
+              data = json.load(f)
+
+          fg = FeedGenerator()
+          fg.title('Recently Watched TV Shows')
+          fg.link(href='https://yourdomain.example/feed.xml', rel='self')
+          fg.description('Latest 10 TV episodes watched via Trakt')
+
+          history = [e for e in data.get('history', []) if e.get('media_type') == 'show']
+          for entry in sorted(history, key=lambda x: x['watched_at'], reverse=True)[:10]:
+              ep = entry['episode']
+              show = entry['show']
+              fe = fg.add_entry()
+              fe.title(f"{show['title']} - S{ep['season']:02}E{ep['number']:02} - {ep['title']}")
+              fe.link(href=f"https://trakt.tv/shows/{show['ids']['slug']}/seasons/{ep['season']}/episodes/{ep['number']}")
+              fe.pubDate(datetime.strptime(entry['watched_at'], '%Y-%m-%dT%H:%M:%S.000Z'))
+
+          fg.rss_file('docs/feed.xml')
+          EOF
+
+      - name: Upload RSS feed to Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v3
+
