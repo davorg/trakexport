@@ -24,7 +24,7 @@ jobs:
       - name: Restore Traktexport credentials
         run: |
           mkdir -p ~/.config/traktexport
-          echo '${{ secrets.TRAKTEXPORT_AUTH }}' > ~/.config/traktexport/your_username.json
+          echo '${{ secrets.TRAKTEXPORT_AUTH }}' > ~/.config/traktexport/davorg.json
 
       - name: Export Trakt history
         run: traktexport partial_export your_username --pages 1 > history.json
