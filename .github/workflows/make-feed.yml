@@ -48,14 +48,15 @@ jobs:
           fg.description('Latest 10 TV episodes watched via Trakt')
 
           history = [e for e in data.get('history', []) if e.get('type') == 'episode' and 'episode' in e and 'show' in e]
-          for entry in sorted(history, key=lambda x: x['watched_at'], reverse=True)[:10]:
+          for entry in sorted(history, key=lambda x: x['watched_at'])[:10][::-1]:
               try:
                   ep = entry['episode']
                   show = entry['show']
+                  watched = datetime.strptime(entry['watched_at'], '%Y-%m-%dT%H:%M:%S.000Z')
                   fe = fg.add_entry()
                   fe.title(f"{show['title']} - S{ep['season']:02}E{ep['number']:02} - {ep['title']}")
                   fe.link(href=f"https://trakt.tv/shows/{show['ids']['slug']}/seasons/{ep['season']}/episodes/{ep['number']}")
-                  fe.pubDate(datetime.strptime(entry['watched_at'], '%Y-%m-%dT%H:%M:%S.000Z'))
+                  fe.pubDate(watched.strftime('%a, %d %b %Y %H:%M:%S +0000'))
               except Exception as ex:
                   print("Skipping entry due to error:", ex)
 
