@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: write
-      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,19 +47,22 @@ jobs:
           fg.link(href='https://yourdomain.example/feed.xml', rel='self')
           fg.description('Latest 10 TV episodes watched via Trakt')
 
-          history = [e for e in data.get('history', []) if e.get('media_type') == 'show']
+          history = [e for e in data.get('history', []) if e.get('type') == 'episode' and 'episode' in e and 'show' in e]
           for entry in sorted(history, key=lambda x: x['watched_at'], reverse=True)[:10]:
-              ep = entry['episode']
-              show = entry['show']
-              fe = fg.add_entry()
-              fe.title(f"{show['title']} - S{ep['season']:02}E{ep['number']:02} - {ep['title']}")
-              fe.link(href=f"https://trakt.tv/shows/{show['ids']['slug']}/seasons/{ep['season']}/episodes/{ep['number']}")
-              fe.pubDate(datetime.strptime(entry['watched_at'], '%Y-%m-%dT%H:%M:%S.000Z'))
+              try:
+                  ep = entry['episode']
+                  show = entry['show']
+                  fe = fg.add_entry()
+                  fe.title(f"{show['title']} - S{ep['season']:02}E{ep['number']:02} - {ep['title']}")
+                  fe.link(href=f"https://trakt.tv/shows/{show['ids']['slug']}/seasons/{ep['season']}/episodes/{ep['number']}")
+                  fe.pubDate(datetime.strptime(entry['watched_at'], '%Y-%m-%dT%H:%M:%S.000Z'))
+              except Exception as ex:
+                  print("Skipping entry due to error:", ex)
 
           fg.rss_file('docs/feed.xml')
           EOF
 
-      - name: Update pages artifact
+      - name: Upload RSS feed to Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/
@@ -79,3 +80,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
