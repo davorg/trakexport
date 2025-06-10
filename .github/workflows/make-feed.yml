@@ -31,6 +31,7 @@ jobs:
 
       - name: Generate RSS feed
         run: |
+          mkdir -p docs
           python3 <<EOF
           import json
           from datetime import datetime
