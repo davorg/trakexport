@@ -27,7 +27,7 @@ jobs:
           echo '${{ secrets.TRAKTEXPORT_AUTH }}' > ~/.local/share/traktexport.json
 
       - name: Export Trakt history
-        run: traktexport partial_export --pages 1 > history.json
+        run: traktexport partial_export davorg --pages 1 > history.json
 
       - name: Generate RSS feed
         run: |
@@ -63,3 +63,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v3
+
