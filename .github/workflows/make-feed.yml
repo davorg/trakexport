@@ -40,7 +40,8 @@ jobs:
         run: cpanm --installdeps --notest .
 
       - name: Generate RSS feed
-        run:
+        run: |
+          mkdir docs
           bin/mkfeed > docs/feed.xml
 
       - name: Upload RSS feed to Pages artifact
