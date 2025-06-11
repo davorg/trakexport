@@ -37,7 +37,7 @@ jobs:
           sudo apt-get install -y cpanminus 
 
       - name: Install modules
-        run: cpanm --installdeps --notest .
+        run: cpanm --sudo --installdeps --notest .
 
       - name: Generate RSS feed
         run: |
