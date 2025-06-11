@@ -29,7 +29,7 @@ jobs:
           echo '${{ secrets.TRAKTEXPORT_AUTH }}' > ~/.local/share/traktexport.json
 
       - name: Export Trakt history
-        run: traktexport partial_export davorg --pages 1 > history.json
+        run: traktexport partial_export ${{ secrets.TRAKTUSERNAME }} --pages 1 > history.json
 
       - name: Install cpanm
         run: |
