@@ -31,49 +31,17 @@ jobs:
       - name: Export Trakt history
         run: traktexport partial_export davorg --pages 1 > history.json
 
-      - name: Generate RSS feed
+      - name: Install cpanm
         run: |
-          mkdir -p docs
-          python3 <<EOF
-          import json
-          from datetime import datetime
-          from feedgen.feed import FeedGenerator
+          apt-get update -y
+          apt-get install -y cpanminus 
 
-          with open('history.json') as f:
-              data = json.load(f)
+      - name: Install modules
+        run: cpanm --installdeps --notest .
 
-          fg = FeedGenerator()
-          fg.title('Recently Watched TV Shows')
-          fg.link(href='https://yourdomain.example/feed.xml', rel='self')
-          fg.description('Latest 10 TV episodes watched via Trakt')
-
-          history = data.get('history', [])
-          sorted_history = sorted(history, key=lambda x: x.get('watched_at', ''), reverse=True)[:10]
-
-          for entry in sorted_history:
-              try:
-                  fe = fg.add_entry()
-                  watched = datetime.strptime(entry['watched_at'], '%Y-%m-%dT%H:%M:%S.000Z')
-                  fe.pubDate(watched.strftime('%a, %d %b %Y %H:%M:%S +0000'))
-
-                  if entry['type'] == 'episode' and 'episode' in entry and 'show' in entry:
-                      ep = entry['episode']
-                      show = entry['show']
-                      fe.title(f"{show['title']} - S{ep['season']:02}E{ep['number']:02} - {ep['title']}")
-                      fe.link(href=f"https://trakt.tv/shows/{show['ids']['slug']}/seasons/{ep['season']}/episodes/{ep['number']}")
-                      if 'overview' in show:
-                          fe.description(show['overview'])
-                  elif entry['type'] == 'movie' and 'movie' in entry:
-                      movie = entry['movie']
-                      fe.title(movie['title'])
-                      fe.link(href=f"https://trakt.tv/movies/{movie['ids']['slug']}")
-                      if 'overview' in movie:
-                          fe.description(movie['overview'])
-              except Exception as ex:
-                  print("Skipping entry due to error:", ex)
-
-          fg.rss_file('docs/feed.xml')
-          EOF
+      - name: Generate RSS feed
+        run:
+          bin/mkfeed > docs/feed.xml
 
       - name: Upload RSS feed to Pages artifact
         uses: actions/upload-pages-artifact@v3

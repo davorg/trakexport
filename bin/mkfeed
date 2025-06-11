@@ -1,0 +1,102 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+use feature qw[state say];
+use experimental 'signatures';
+
+use XML::Feed;
+use JSON;
+use Path::Tiny;
+use DateTime;
+use DateTime::Format::Strptime;
+
+my $json_file = shift || 'history.json';
+
+my $json = path($json_file)->slurp_utf8;
+
+my $data = JSON->new->decode($json);
+
+my @history = @{ $data->{history} };
+@history = sort { $b->{watched_at} cmp $a->{watched_at} } @history;
+$#history = 9;
+
+my $feed = XML::Feed->new('Atom');
+my $feed_link = 'https://davorg.dev/traktexport/feed.xml';
+$feed->$_($feed_link) for qw[id link self_link];
+$feed->title(q[Dave's Trackt Feed]);
+$feed->modified(DateTime->now);
+
+my %entry_type = (
+  episode => 1,
+  movie   => 1,
+);
+
+for (@history) {
+  say "$_->{type} / $_->{watched_at}";
+
+  unless ($_->{type} and $entry_type{$_->{type}}) {
+    warn "Invalid history entry\n";
+    next;
+  }
+
+  my $entry = XML::Feed::Entry->new;
+  my $link = mklink($_);
+  $entry->$_($link) for qw[link id];
+  $entry->title(mktitle($_));
+  $entry->modified(mktime($_));
+  if (my $summary = mksummary($_)) {
+    $entry->summary($summary);
+  }
+  $entry->author('davorg@trakt');
+  $feed->add_entry($entry);
+}
+
+
+print $feed->as_xml;
+
+sub mklink($entry) {
+  state $base = 'https://trakt.tv/';
+  my $link = $base;
+  if ($entry->{type} eq 'movie') {
+    $link .= "movies/$entry->{movie}{ids}{slug}";
+  } else {
+    $link .= "shows/$entry->{show}{ids}{slug}" .
+             "/seasons/$entry->{episode}{season}" .
+             "/episodes/$entry->{episode}{number}";
+  }
+
+  return $link;
+}
+
+sub mktitle ($entry) {
+  my $title;
+
+  if ($entry->{type} eq 'episode') {
+    $title = "$entry->{show}{title} [S%02dE%02d]: $entry->{episode}{title}";
+
+    $title = sprintf $title, $entry->{episode}{season}, $entry->{episode}{number};
+  } else {
+    $title = $entry->{movie}{title};
+  }
+
+  return $title;
+}
+
+sub mktime ($entry) {
+  # "2025-05-21T19:36:02.000Z"
+  state $format = '%Y-%m-%dT%H:%M:%S.%3NZ';
+  state $parser = DateTime::Format::Strptime->new(pattern => $format);
+
+  my $dt = $parser->parse_datetime($entry->{watched_at});  
+
+  return $dt;
+}
+
+sub mksummary ($entry) {
+  if ($entry->{type} eq 'movie') {
+    return exists $entry->{movie}{overview} ? $entry->{movie}{overview} : '';
+  } else {
+    return exists $entry->{episode}{overview} ? $entry->{episode}{overview} : '';
+  }
+}
