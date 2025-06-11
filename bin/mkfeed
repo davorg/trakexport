@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use feature qw[state say];
+use feature qw[state];
 use experimental 'signatures';
 
 use XML::Feed;
@@ -33,8 +33,6 @@ my %entry_type = (
 );
 
 for (@history) {
-  say "$_->{type} / $_->{watched_at}";
-
   unless ($_->{type} and $entry_type{$_->{type}}) {
     warn "Invalid history entry\n";
     next;
@@ -51,7 +49,6 @@ for (@history) {
   $entry->author('davorg@trakt');
   $feed->add_entry($entry);
 }
-
 
 print $feed->as_xml;
 
