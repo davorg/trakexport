@@ -1,8 +1,9 @@
 name: Build Trakt Feed
 
 on:
-  schedule:
-    - cron: '0 */2 * * *'  # Every two hours
+  # Doesn't work because of traktexport's silly refresh method
+  # schedule:
+  #  - cron: '0 */2 * * *'  # Every two hours
   workflow_dispatch:
 
 jobs:
